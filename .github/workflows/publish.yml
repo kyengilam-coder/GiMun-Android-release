@@ -1,0 +1,142 @@
+name: Publish signed GiMun APK
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Source tag to publish (empty = newest v* tag)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-gimun-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_REPOSITORY: kyengilam-coder/GiMun-Android
+
+    steps:
+      - name: Resolve source version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REQUESTED_TAG:-}" ]; then
+            TAG="$REQUESTED_TAG"
+          else
+            TAG=$(git ls-remote --tags --refs "https://github.com/${SOURCE_REPOSITORY}.git" \
+              | awk -F/ '{print $3}' \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n 1)
+          fi
+          if [ -z "$TAG" ]; then
+            echo "No source v* tag was found." >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check signing secrets
+        if: steps.version.outputs.exists != 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+
+      - name: Check out source tag
+        if: steps.version.outputs.exists != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ steps.version.outputs.tag }}
+          path: source
+
+      - name: Set up Java
+        if: steps.version.outputs.exists != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        if: steps.version.outputs.exists != 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare permanent release signing
+        if: steps.version.outputs.exists != 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > source/app/release.jks
+          {
+            echo "storeFile=release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > source/release-keystore.properties
+
+      - name: Build signed release APK
+        if: steps.version.outputs.exists != 'true'
+        working-directory: source
+        run: ./gradlew clean assembleRelease --no-daemon
+
+      - name: Verify and name release files
+        if: steps.version.outputs.exists != 'true'
+        id: package
+        env:
+          SOURCE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          VERSION=$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' source/app/build.gradle | head -n 1)
+          test "$SOURCE_TAG" = "v$VERSION"
+          mkdir -p out
+          cp source/app/build/outputs/apk/release/app-release.apk "out/GiMun-$VERSION.apk"
+          (cd out && sha256sum "GiMun-$VERSION.apk" > "GiMun-$VERSION.apk.sha256")
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "out/GiMun-$VERSION.apk"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "$SOURCE_TAG" \
+            "out/GiMun-$VERSION.apk" \
+            "out/GiMun-$VERSION.apk.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$SOURCE_TAG" \
+            --generate-notes \
+            --latest
+
+      - name: Already published
+        if: steps.version.outputs.exists == 'true'
+        run: echo "${{ steps.version.outputs.tag }} is already published."
