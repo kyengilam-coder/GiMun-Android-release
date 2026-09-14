@@ -24,8 +24,35 @@ jobs:
       SOURCE_REPOSITORY: kyengilam-coder/GiMun-Android
 
     steps:
+      - name: Check automation secrets
+        env:
+          SOURCE_DEPLOY_KEY: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_DEPLOY_KEY"
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+
+      - name: Check out private source repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ inputs.tag || 'main' }}
+          path: source
+          fetch-depth: 0
+          fetch-tags: true
+          ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
+
       - name: Resolve source version
         id: version
+        working-directory: source
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED_TAG: ${{ inputs.tag }}
@@ -34,8 +61,7 @@ jobs:
           if [ -n "${REQUESTED_TAG:-}" ]; then
             TAG="$REQUESTED_TAG"
           else
-            TAG=$(git ls-remote --tags --refs "https://github.com/${SOURCE_REPOSITORY}.git" \
-              | awk -F/ '{print $3}' \
+            TAG=$(git tag --list 'v*' \
               | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
               | sort -V \
               | tail -n 1)
@@ -44,34 +70,18 @@ jobs:
             echo "No source v* tag was found." >&2
             exit 1
           fi
+          git rev-parse --verify "$TAG^{commit}" >/dev/null
+          git checkout --detach "$TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            VERSION="${TAG#v}"
+            ASSETS=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+            grep -Fxq "GiMun-$VERSION.apk" <<< "$ASSETS"
+            grep -Fxq "GiMun-$VERSION.apk.sha256" <<< "$ASSETS"
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Check signing secrets
-        if: steps.version.outputs.exists != 'true'
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "$KEYSTORE_BASE64"
-          test -n "$KEYSTORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
-
-      - name: Check out source tag
-        if: steps.version.outputs.exists != 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SOURCE_REPOSITORY }}
-          ref: ${{ steps.version.outputs.tag }}
-          path: source
 
       - name: Set up Java
         if: steps.version.outputs.exists != 'true'
@@ -100,6 +110,7 @@ jobs:
             echo "keyAlias=$KEY_ALIAS"
             echo "keyPassword=$KEY_PASSWORD"
           } > source/release-keystore.properties
+          chmod +x source/gradlew
 
       - name: Build signed release APK
         if: steps.version.outputs.exists != 'true'
@@ -118,7 +129,9 @@ jobs:
           mkdir -p out
           cp source/app/build/outputs/apk/release/app-release.apk "out/GiMun-$VERSION.apk"
           (cd out && sha256sum "GiMun-$VERSION.apk" > "GiMun-$VERSION.apk.sha256")
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "out/GiMun-$VERSION.apk"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "out/GiMun-$VERSION.apk"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
@@ -134,7 +147,7 @@ jobs:
             "out/GiMun-$VERSION.apk.sha256" \
             --repo "$GITHUB_REPOSITORY" \
             --title "$SOURCE_TAG" \
-            --generate-notes \
+            --notes "Permanently signed Android APK built from ${SOURCE_REPOSITORY} tag ${SOURCE_TAG}." \
             --latest
 
       - name: Already published
