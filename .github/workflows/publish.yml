@@ -115,7 +115,7 @@ jobs:
       - name: Build signed release APK
         if: steps.version.outputs.exists != 'true'
         working-directory: source
-        run: ./gradlew clean assembleRelease --no-daemon
+        run: ./gradlew clean assembleGithubRelease --no-daemon
 
       - name: Verify and name release files
         if: steps.version.outputs.exists != 'true'
@@ -127,7 +127,7 @@ jobs:
           VERSION=$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' source/app/build.gradle | head -n 1)
           test "$SOURCE_TAG" = "v$VERSION"
           mkdir -p out
-          cp source/app/build/outputs/apk/release/app-release.apk "out/GiMun-$VERSION.apk"
+          cp source/app/build/outputs/apk/github/release/app-github-release.apk "out/GiMun-$VERSION.apk"
           (cd out && sha256sum "GiMun-$VERSION.apk" > "GiMun-$VERSION.apk.sha256")
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)
           test -x "$APKSIGNER"
