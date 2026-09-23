@@ -47,6 +47,22 @@
   th { background: color-mix(in srgb, var(--ink) 10%, transparent); }
   ul { padding-left: 1.2rem; }
   a { color: var(--seal); }
+  /* 좁은 화면에서는 표를 칸칸이 쌓아 글자가 세로로 눌리지 않게 한다. */
+  @media (max-width: 560px) {
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tr { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; }
+    td { border: none; border-top: 1px solid var(--line); }
+    tr td:first-child { border-top: none; }
+    td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    tr td:first-child { font-weight: 700; color: var(--ink); }
+  }
   footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
 </style>
 </head>
@@ -63,22 +79,26 @@
 
   <h2>앱이 쓰는 권한과 그 이유</h2>
   <table>
-    <tr><th>권한</th><th>쓰는 곳</th><th>처리 방식</th></tr>
-    <tr>
-      <td>카메라</td>
-      <td>擇方 방위판의 AR 겹쳐 보기</td>
-      <td>화면에 미리보기만 겹쳐 보입니다. 사진·영상을 저장하거나 보내지 않습니다. 거부해도 방위판은 그대로 씁니다.</td>
-    </tr>
-    <tr>
-      <td>대략적 위치</td>
-      <td>眞北(진북) 보정을 켤 때의 편각 계산</td>
-      <td>좌표를 안드로이드의 <code>GeomagneticField</code> 에 넣어 편각만 구하고 곧 버립니다. 저장·전송하지 않습니다. 거부하면 자북을 씁니다.</td>
-    </tr>
-    <tr>
-      <td>인터넷</td>
-      <td>아래 ‘망 사용’ 참조</td>
-      <td>Play 에서 받은 앱은 이 권한으로 아무 곳에도 접속하지 않습니다.</td>
-    </tr>
+    <thead>
+      <tr><th>권한</th><th>쓰는 곳</th><th>처리 방식</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="권한">카메라</td>
+        <td data-label="쓰는 곳">擇方 방위판의 AR 겹쳐 보기</td>
+        <td data-label="처리 방식">화면에 미리보기만 겹쳐 보입니다. 사진·영상을 저장하거나 보내지 않습니다. 거부해도 방위판은 그대로 씁니다.</td>
+      </tr>
+      <tr>
+        <td data-label="권한">대략적 위치</td>
+        <td data-label="쓰는 곳">眞北(진북) 보정을 켤 때의 편각 계산</td>
+        <td data-label="처리 방식">좌표를 안드로이드의 <code>GeomagneticField</code> 에 넣어 편각만 구하고 곧 버립니다. 저장·전송하지 않습니다. 거부하면 자북을 씁니다.</td>
+      </tr>
+      <tr>
+        <td data-label="권한">인터넷</td>
+        <td data-label="쓰는 곳">아래 ‘망 사용’ 참조</td>
+        <td data-label="처리 방식">Play 에서 받은 앱은 이 권한으로 아무 곳에도 접속하지 않습니다.</td>
+      </tr>
+    </tbody>
   </table>
   <p>
     방향·기울기 표시에는 회전 벡터·자기장 센서 값을 읽습니다.
