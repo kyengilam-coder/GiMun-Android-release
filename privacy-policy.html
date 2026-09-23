@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>기문포국 개인정보처리방침</title>
+<meta name="description" content="Android 앱 기문포국(com.gimun.poguk)의 개인정보처리방침.">
+<style>
+  :root {
+    --ink: #2f4f46;
+    --paper: #fbfaf6;
+    --text: #22312c;
+    --muted: #5d6e68;
+    --line: #dfdcd2;
+    --seal: #9e3f2f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #cfe0d8;
+      --paper: #17211d;
+      --text: #e6ece9;
+      --muted: #a3b3ac;
+      --line: #2e3d37;
+      --seal: #d98b78;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px 72px;
+    background: var(--paper);
+    color: var(--text);
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    line-height: 1.75;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.6rem; color: var(--ink); margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; color: var(--ink); margin: 40px 0 8px; }
+  .meta { color: var(--muted); font-size: 0.92rem; margin: 0 0 28px; }
+  .summary {
+    border-left: 4px solid var(--seal);
+    padding: 2px 0 2px 16px;
+    margin: 24px 0 8px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { background: color-mix(in srgb, var(--ink) 10%, transparent); }
+  ul { padding-left: 1.2rem; }
+  a { color: var(--seal); }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>기문포국 개인정보처리방침</h1>
+  <p class="meta">시행일 2026-09-23 · 앱 이름 기문포국 · 패키지 <code>com.gimun.poguk</code></p>
+
+  <p class="summary">
+    이 앱은 개인정보를 <strong>수집하지도, 저장하지도, 외부로 보내지도 않습니다.</strong>
+    계정도 로그인도 없고, 광고나 분석 도구를 넣지 않았습니다.
+    포국 계산과 방위 표시는 모두 기기 안에서 이루어집니다.
+  </p>
+
+  <h2>앱이 쓰는 권한과 그 이유</h2>
+  <table>
+    <tr><th>권한</th><th>쓰는 곳</th><th>처리 방식</th></tr>
+    <tr>
+      <td>카메라</td>
+      <td>擇方 방위판의 AR 겹쳐 보기</td>
+      <td>화면에 미리보기만 겹쳐 보입니다. 사진·영상을 저장하거나 보내지 않습니다. 거부해도 방위판은 그대로 씁니다.</td>
+    </tr>
+    <tr>
+      <td>대략적 위치</td>
+      <td>眞北(진북) 보정을 켤 때의 편각 계산</td>
+      <td>좌표를 안드로이드의 <code>GeomagneticField</code> 에 넣어 편각만 구하고 곧 버립니다. 저장·전송하지 않습니다. 거부하면 자북을 씁니다.</td>
+    </tr>
+    <tr>
+      <td>인터넷</td>
+      <td>아래 ‘망 사용’ 참조</td>
+      <td>Play 에서 받은 앱은 이 권한으로 아무 곳에도 접속하지 않습니다.</td>
+    </tr>
+  </table>
+  <p>
+    방향·기울기 표시에는 회전 벡터·자기장 센서 값을 읽습니다.
+    센서 값은 화면에 보여 주기 위해서만 쓰이며 기기 밖으로 나가지 않습니다.
+  </p>
+
+  <h2>저장되는 것</h2>
+  <ul>
+    <li>입력한 날짜·시각과 포국 결과는 앱을 닫으면 사라지는 임시 저장소(<code>sessionStorage</code>)에만 있습니다.</li>
+    <li>앱 데이터 백업을 꺼 두었으므로 클라우드 백업이나 <code>adb backup</code> 으로 앱 데이터가 밖으로 나가지 않습니다.</li>
+    <li>계산에 쓰는 절기·음력 자료와 설명서는 모두 앱 안에 들어 있습니다. 내려받지 않습니다.</li>
+  </ul>
+
+  <h2>망 사용</h2>
+  <ul>
+    <li><strong>Play 에서 받은 앱</strong>은 어떤 서버에도 접속하지 않습니다. 화면과 자료를 전부 앱 안에서 읽습니다.</li>
+    <li><strong>GitHub 에서 직접 받은 앱</strong>(같은 앱의 다른 배포본)은 새 버전이 있는지 GitHub 의 공개 릴리스 정보를
+      확인하고, 사용자가 동의할 때만 새 설치 파일을 내려받습니다. 이 요청에는 개인정보를 담지 않습니다.
+      다만 인터넷 접속이므로 GitHub 서버에는 접속 기록(IP 주소 등)이 남을 수 있으며, 이는 GitHub 의 처리 방침에 따릅니다.</li>
+  </ul>
+
+  <h2>제3자 제공·광고·분석</h2>
+  <p>
+    개인정보를 제3자에게 제공하거나 판매하지 않습니다. 광고 식별자를 쓰지 않고,
+    분석·추적 도구를 넣지 않았습니다. 앱에 포함된 외부 라이브러리는 없습니다.
+  </p>
+
+  <h2>아동</h2>
+  <p>아동을 대상으로 만든 앱이 아니며, 아동으로부터 개인정보를 수집하지 않습니다.</p>
+
+  <h2>이용자의 권리</h2>
+  <p>
+    앱이 개인정보를 모으지 않으므로 열람·정정·삭제를 요청할 대상 자료가 없습니다.
+    카메라·위치 권한은 안드로이드 설정에서 언제든 끌 수 있고, 꺼도 앱의 계산 기능은 그대로 씁니다.
+  </p>
+
+  <h2>방침 변경</h2>
+  <p>내용이 바뀌면 이 문서를 고치고 시행일을 함께 바꿉니다.</p>
+
+  <h2>문의</h2>
+  <p><a href="mailto:yeksul2026@gmail.com">yeksul2026@gmail.com</a></p>
+
+  <footer>기문포국 · 奇門布局 — 시간과 방위의 기록</footer>
+</main>
+</body>
+</html>
